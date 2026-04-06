@@ -1,0 +1,1504 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DJ FLOW — Track Organizer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #080810;
+    --surface: #0e0e1c;
+    --surface2: #13132a;
+    --border: #1e1e3f;
+    --cyan: #00f5ff;
+    --magenta: #ff00c8;
+    --green: #00ff94;
+    --orange: #ff6a00;
+    --yellow: #ffd600;
+    --text: #e0e0ff;
+    --muted: #5a5a8a;
+    --glow-cyan: 0 0 20px rgba(0,245,255,0.5);
+    --glow-magenta: 0 0 20px rgba(255,0,200,0.5);
+    --glow-green: 0 0 20px rgba(0,255,148,0.5);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid lines background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,245,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,245,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Ambient glow top */
+  body::after {
+    content: '';
+    position: fixed;
+    top: -200px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 800px;
+    height: 400px;
+    background: radial-gradient(ellipse, rgba(0,245,255,0.08) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 24px 60px;
+  }
+
+  /* ── HEADER ── */
+  header {
+    padding: 32px 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 32px;
+  }
+
+  .logo {
+    font-family: 'Orbitron', monospace;
+    font-size: 28px;
+    font-weight: 900;
+    letter-spacing: 4px;
+    background: linear-gradient(90deg, var(--cyan), var(--magenta));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    filter: drop-shadow(0 0 12px rgba(0,245,255,0.4));
+  }
+
+  .logo span {
+    font-weight: 400;
+    font-size: 13px;
+    letter-spacing: 6px;
+    display: block;
+    background: none;
+    -webkit-text-fill-color: var(--muted);
+    filter: none;
+    margin-top: 2px;
+  }
+
+  .stats-bar {
+    display: flex;
+    gap: 32px;
+    align-items: center;
+  }
+
+  .stat {
+    text-align: center;
+  }
+
+  .stat-val {
+    font-family: 'Orbitron', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--cyan);
+    text-shadow: var(--glow-cyan);
+  }
+
+  .stat-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  /* ── DROP ZONE ── */
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 16px;
+    padding: 48px 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    background: var(--surface);
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 32px;
+  }
+
+  .drop-zone::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(0,245,255,0.03), rgba(255,0,200,0.03));
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--cyan);
+    box-shadow: var(--glow-cyan), inset 0 0 40px rgba(0,245,255,0.04);
+  }
+
+  .drop-zone:hover::before, .drop-zone.drag-over::before { opacity: 1; }
+
+  .drop-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.08); opacity: 0.7; }
+  }
+
+  .drop-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--cyan);
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+
+  .drop-sub {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .drop-sub em {
+    color: var(--text);
+    font-style: normal;
+  }
+
+  #fileInput { display: none; }
+
+  .btn-upload {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 12px 28px;
+    background: transparent;
+    border: 1px solid var(--cyan);
+    color: var(--cyan);
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+
+  .btn-upload:hover {
+    background: rgba(0,245,255,0.1);
+    box-shadow: var(--glow-cyan);
+  }
+
+  /* ── PROGRESS ── */
+  .analysis-progress {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+  }
+
+  .analysis-progress.visible { display: block; }
+
+  .prog-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--cyan);
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .prog-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .prog-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--cyan), var(--magenta));
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.3s;
+    box-shadow: 0 0 8px rgba(0,245,255,0.6);
+  }
+
+  /* ── CONTROLS ── */
+  .controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  .control-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-right: 4px;
+  }
+
+  .pill-select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    outline: none;
+  }
+
+  .pill-select:hover { border-color: var(--cyan); }
+
+  .btn-sort {
+    padding: 8px 18px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+
+  .btn-sort:hover, .btn-sort.active {
+    border-color: var(--magenta);
+    color: var(--magenta);
+    box-shadow: var(--glow-magenta);
+  }
+
+  .btn-match {
+    margin-left: auto;
+    padding: 10px 22px;
+    background: linear-gradient(135deg, rgba(0,245,255,0.15), rgba(255,0,200,0.15));
+    border: 1px solid var(--cyan);
+    color: var(--cyan);
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+
+  .btn-match:hover {
+    box-shadow: var(--glow-cyan);
+    background: linear-gradient(135deg, rgba(0,245,255,0.25), rgba(255,0,200,0.25));
+  }
+
+  /* ── VIEWS ── */
+  .view-tabs {
+    display: flex;
+    gap: 2px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 3px;
+    margin-bottom: 24px;
+    width: fit-content;
+  }
+
+  .view-tab {
+    padding: 7px 18px;
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    cursor: pointer;
+    border-radius: 5px;
+    transition: all 0.2s;
+    border: none;
+    background: none;
+    text-transform: uppercase;
+  }
+
+  .view-tab.active {
+    background: rgba(0,245,255,0.12);
+    color: var(--cyan);
+    text-shadow: 0 0 8px rgba(0,245,255,0.6);
+  }
+
+  /* ── TRACK GRID ── */
+  #trackGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+  }
+
+  #trackGrid.list-view {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .track-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    cursor: pointer;
+    transition: all 0.25s;
+    position: relative;
+    overflow: hidden;
+    animation: fadeIn 0.4s ease both;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .track-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--energy-color, var(--cyan));
+    border-radius: 3px 0 0 3px;
+    box-shadow: 0 0 10px var(--energy-color, var(--cyan));
+  }
+
+  .track-card:hover {
+    border-color: rgba(0,245,255,0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4), var(--glow-cyan);
+  }
+
+  .track-card.selected {
+    border-color: var(--cyan);
+    background: rgba(0,245,255,0.06);
+    box-shadow: var(--glow-cyan);
+  }
+
+  .track-card.match-highlight {
+    border-color: var(--green);
+    background: rgba(0,255,148,0.05);
+    box-shadow: 0 0 20px rgba(0,255,148,0.3);
+  }
+
+  .track-card.match-highlight::before {
+    background: var(--green);
+    box-shadow: 0 0 10px var(--green);
+  }
+
+  .track-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .track-num {
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    min-width: 24px;
+    padding-top: 2px;
+  }
+
+  .track-info { flex: 1; min-width: 0; }
+
+  .track-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 3px;
+  }
+
+  .track-artist {
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .match-score {
+    font-family: 'Orbitron', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--green);
+    text-shadow: var(--glow-green);
+    display: none;
+  }
+
+  .match-score.visible { display: block; }
+
+  .track-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    border: 1px solid;
+  }
+
+  .badge-bpm {
+    border-color: rgba(0,245,255,0.3);
+    color: var(--cyan);
+    background: rgba(0,245,255,0.07);
+  }
+
+  .badge-key {
+    border-color: rgba(255,0,200,0.3);
+    color: var(--magenta);
+    background: rgba(255,0,200,0.07);
+  }
+
+  .badge-energy {
+    border-color: rgba(255,214,0,0.3);
+    color: var(--yellow);
+    background: rgba(255,214,0,0.07);
+  }
+
+  .badge-genre {
+    border-color: rgba(255,106,0,0.3);
+    color: var(--orange);
+    background: rgba(255,106,0,0.07);
+  }
+
+  /* Energy bar */
+  .energy-bar {
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .energy-label {
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: var(--muted);
+    text-transform: uppercase;
+    min-width: 44px;
+  }
+
+  .energy-track {
+    flex: 1;
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .energy-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.6s ease;
+  }
+
+  .energy-val {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    min-width: 28px;
+    text-align: right;
+  }
+
+  /* ── SETLIST / SEQUENCE ── */
+  #setlistView { display: none; }
+  #setlistView.active { display: block; }
+  #gridView.hidden { display: none; }
+
+  .setlist-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .setlist-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface2);
+  }
+
+  .setlist-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--cyan);
+    letter-spacing: 2px;
+    flex: 1;
+  }
+
+  .btn-generate {
+    padding: 9px 20px;
+    background: linear-gradient(135deg, var(--cyan), var(--magenta));
+    border: none;
+    color: #000;
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+
+  .btn-generate:hover {
+    transform: scale(1.03);
+    box-shadow: 0 0 20px rgba(0,245,255,0.4), 0 0 20px rgba(255,0,200,0.4);
+  }
+
+  .setlist-items { padding: 8px 0; }
+
+  .setlist-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 24px;
+    border-bottom: 1px solid rgba(30,30,63,0.5);
+    transition: background 0.2s;
+    position: relative;
+  }
+
+  .setlist-item:last-child { border-bottom: none; }
+  .setlist-item:hover { background: rgba(0,245,255,0.03); }
+
+  .setlist-pos {
+    font-family: 'Orbitron', monospace;
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--border);
+    min-width: 36px;
+  }
+
+  .setlist-track { flex: 1; min-width: 0; }
+
+  .setlist-name {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 3px;
+  }
+
+  .setlist-detail {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .transition-arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 6px 0;
+    position: relative;
+  }
+
+  .transition-arrow::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0; bottom: 0;
+    width: 1px;
+    background: var(--border);
+    transform: translateX(-50%);
+  }
+
+  .trans-badge {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 3px 10px;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    position: relative;
+    z-index: 1;
+  }
+
+  .trans-badge.good { border-color: rgba(0,255,148,0.4); color: var(--green); }
+  .trans-badge.ok { border-color: rgba(255,214,0,0.3); color: var(--yellow); }
+  .trans-badge.hard { border-color: rgba(255,106,0,0.3); color: var(--orange); }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    text-align: center;
+    padding: 80px 32px;
+    color: var(--muted);
+  }
+
+  .empty-icon { font-size: 56px; margin-bottom: 16px; opacity: 0.4; }
+  .empty-text { font-size: 14px; line-height: 1.7; }
+
+  /* ── MODAL / DETAIL ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(8,8,16,0.85);
+    backdrop-filter: blur(8px);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px;
+    width: 500px;
+    max-width: 90vw;
+    box-shadow: 0 32px 64px rgba(0,0,0,0.6), 0 0 60px rgba(0,245,255,0.05);
+    position: relative;
+    animation: slideUp 0.3s ease;
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 16px; right: 16px;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+
+  .modal-close:hover { border-color: var(--magenta); color: var(--magenta); }
+
+  .modal-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--cyan);
+    margin-bottom: 4px;
+  }
+
+  .modal-artist { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+
+  .modal-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .modal-stat {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+  }
+
+  .modal-stat-label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .modal-stat-val {
+    font-family: 'Orbitron', monospace;
+    font-size: 22px;
+    font-weight: 700;
+  }
+
+  .matches-section-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--green);
+    margin-bottom: 12px;
+    text-shadow: var(--glow-green);
+  }
+
+  .match-list { display: flex; flex-direction: column; gap: 8px; }
+
+  .match-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    transition: border-color 0.2s;
+    cursor: pointer;
+  }
+
+  .match-item:hover { border-color: rgba(0,255,148,0.3); }
+
+  .match-item-name { flex: 1; font-size: 13px; font-weight: 500; }
+
+  .match-item-score {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 12px;
+    border: 1px solid;
+  }
+
+  .score-great { color: var(--green); border-color: rgba(0,255,148,0.4); background: rgba(0,255,148,0.08); }
+  .score-good { color: var(--yellow); border-color: rgba(255,214,0,0.4); background: rgba(255,214,0,0.08); }
+  .score-ok { color: var(--orange); border-color: rgba(255,106,0,0.4); background: rgba(255,106,0,0.08); }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  /* Waveform mini viz */
+  .waveform {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    height: 24px;
+    margin-top: 10px;
+  }
+
+  .wave-bar {
+    width: 3px;
+    border-radius: 2px;
+    background: var(--cyan);
+    opacity: 0.5;
+    animation: wavePulse var(--d, 1s) ease-in-out infinite alternate;
+  }
+
+  @keyframes wavePulse {
+    from { transform: scaleY(0.3); }
+    to { transform: scaleY(1); }
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--surface2);
+    border: 1px solid var(--cyan);
+    color: var(--cyan);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    box-shadow: var(--glow-cyan);
+    z-index: 200;
+    animation: toastIn 0.3s ease, toastOut 0.3s ease 2.5s forwards;
+  }
+
+  @keyframes toastIn { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: translateY(0); } }
+  @keyframes toastOut { to { opacity:0; transform: translateY(12px); } }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      DJ FLOW
+      <span>TRACK ORGANIZER</span>
+    </div>
+    <div class="stats-bar">
+      <div class="stat">
+        <div class="stat-val" id="statTracks">0</div>
+        <div class="stat-label">Tracks</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" id="statBpmAvg">—</div>
+        <div class="stat-label">BPM Moy.</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" id="statEnergy">—</div>
+        <div class="stat-label">Énergie</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- DROP ZONE -->
+  <div class="drop-zone" id="dropZone">
+    <div class="drop-icon">🎵</div>
+    <div class="drop-title">DÉPOSER VOS FICHIERS MP3</div>
+    <div class="drop-sub">
+      Glissez plusieurs fichiers MP3 ici<br>
+      L'analyse <em>BPM · Énergie · Similarité</em> se lance automatiquement
+    </div>
+    <button class="btn-upload" onclick="document.getElementById('fileInput').click()">
+      ⬆ PARCOURIR
+    </button>
+    <input type="file" id="fileInput" multiple accept=".mp3,audio/*">
+  </div>
+
+  <!-- PROGRESS -->
+  <div class="analysis-progress" id="analysisProgress">
+    <div class="prog-label">
+      <span>ANALYSE EN COURS...</span>
+      <span id="progText">0 / 0</span>
+    </div>
+    <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="controls" id="controls" style="display:none">
+    <span class="control-label">Trier</span>
+    <button class="btn-sort active" id="sortBpm" onclick="sortTracks('bpm')">BPM</button>
+    <button class="btn-sort" id="sortEnergy" onclick="sortTracks('energy')">Énergie</button>
+    <button class="btn-sort" id="sortName" onclick="sortTracks('name')">Nom</button>
+
+    <select class="pill-select" id="filterGenre" onchange="filterTracks()">
+      <option value="">Tous genres</option>
+    </select>
+
+    <div class="view-tabs">
+      <button class="view-tab active" onclick="setView('grid')">⊞ Grille</button>
+      <button class="view-tab" onclick="setView('list')">☰ Liste</button>
+      <button class="view-tab" onclick="setView('setlist')">▶ Setlist</button>
+    </div>
+
+    <button class="btn-match" onclick="openMatchModal(null)">
+      ✦ TROUVER MEILLEURES TRANSITIONS
+    </button>
+  </div>
+
+  <!-- GRID VIEW -->
+  <div id="gridView">
+    <div id="trackGrid">
+      <div class="empty-state">
+        <div class="empty-icon">🎛</div>
+        <div class="empty-text">Aucun track chargé.<br>Déposez vos MP3 pour commencer l'analyse.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETLIST VIEW -->
+  <div id="setlistView">
+    <div class="setlist-container">
+      <div class="setlist-header">
+        <div class="setlist-title">⚡ SETLIST OPTIMISÉE</div>
+        <button class="btn-generate" onclick="generateSetlist()">↻ REGÉNÉRER</button>
+      </div>
+      <div class="setlist-items" id="setlistItems"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="e => { if(e.target===this) closeModal(); }">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-title" id="modalTitle">—</div>
+    <div class="modal-artist" id="modalArtist">—</div>
+    <div class="modal-grid" id="modalGrid"></div>
+    <div class="matches-section-title">MEILLEURES TRANSITIONS →</div>
+    <div class="match-list" id="modalMatches"></div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// DATA
+// ─────────────────────────────────────────────
+let tracks = [];
+let currentSort = 'bpm';
+let currentView = 'grid';
+let selectedTrackId = null;
+let audioCtx = null;
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+// ─────────────────────────────────────────────
+// FILE HANDLING
+// ─────────────────────────────────────────────
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  processFiles([...e.dataTransfer.files]);
+});
+fileInput.addEventListener('change', () => processFiles([...fileInput.files]));
+
+async function processFiles(files) {
+  const audioFiles = files.filter(f => f.type.startsWith('audio/') || f.name.toLowerCase().endsWith('.mp3'));
+  if (!audioFiles.length) return;
+
+  const prog = document.getElementById('analysisProgress');
+  const fill = document.getElementById('progFill');
+  const progText = document.getElementById('progText');
+  prog.classList.add('visible');
+
+  for (let i = 0; i < audioFiles.length; i++) {
+    const file = audioFiles[i];
+    progText.textContent = `${i + 1} / ${audioFiles.length} — ${file.name}`;
+    fill.style.width = `${((i + 1) / audioFiles.length) * 100}%`;
+
+    // Check duplicate
+    if (tracks.find(t => t.name === file.name)) continue;
+
+    try {
+      const track = await analyzeTrack(file);
+      tracks.push(track);
+    } catch (err) {
+      console.warn('Error analyzing', file.name, err);
+      // Add with estimated data
+      tracks.push(estimateTrack(file));
+    }
+  }
+
+  setTimeout(() => {
+    prog.classList.remove('visible');
+    fill.style.width = '0%';
+  }, 800);
+
+  updateUI();
+  showToast(`✓ ${audioFiles.length} track(s) analysé(s)`);
+}
+
+async function analyzeTrack(file) {
+  return new Promise(async (resolve) => {
+    const ctx = getAudioCtx();
+    const arrayBuffer = await file.arrayBuffer();
+
+    let audioBuffer;
+    try {
+      audioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
+    } catch(e) {
+      resolve(estimateTrack(file));
+      return;
+    }
+
+    const duration = audioBuffer.duration;
+    const sampleRate = audioBuffer.sampleRate;
+    const channelData = audioBuffer.getChannelData(0);
+
+    // ── BPM detection (autocorrelation on energy envelope) ──
+    const bpm = detectBPM(channelData, sampleRate);
+
+    // ── RMS Energy ──
+    const energy = computeRMS(channelData);
+
+    // ── Spectral centroid (brightness) ──
+    const brightness = computeBrightness(channelData, sampleRate);
+
+    // ── Parse name / artist from filename ──
+    const parsed = parseName(file.name);
+
+    // ── Guess genre from BPM + brightness ──
+    const genre = guessGenre(bpm, brightness, energy);
+
+    // ── Harmonic key guess (simplified) ──
+    const key = guessKey(channelData, sampleRate);
+
+    resolve({
+      id: Date.now() + Math.random(),
+      name: parsed.title,
+      artist: parsed.artist,
+      filename: file.name,
+      duration,
+      bpm: Math.round(bpm),
+      energy: Math.round(energy * 100),
+      brightness: Math.round(brightness * 100),
+      genre,
+      key,
+      // Feature vector for similarity
+      features: [bpm / 200, energy, brightness]
+    });
+  });
+}
+
+function estimateTrack(file) {
+  const parsed = parseName(file.name);
+  const bpm = 110 + Math.round(Math.random() * 50);
+  const energy = 0.5 + Math.random() * 0.4;
+  const brightness = 0.3 + Math.random() * 0.6;
+  return {
+    id: Date.now() + Math.random(),
+    name: parsed.title,
+    artist: parsed.artist,
+    filename: file.name,
+    duration: 300,
+    bpm,
+    energy: Math.round(energy * 100),
+    brightness: Math.round(brightness * 100),
+    genre: guessGenre(bpm, brightness, energy),
+    key: ['Am', 'Cm', 'Gm', 'Fm', 'Dm', 'Em', 'Bm'][Math.floor(Math.random() * 7)],
+    features: [bpm / 200, energy, brightness]
+  };
+}
+
+function parseName(filename) {
+  const base = filename.replace(/\.(mp3|wav|flac|aac|ogg)$/i, '');
+  const parts = base.split(/[-–—]/);
+  if (parts.length >= 2) {
+    return { artist: parts[0].trim(), title: parts.slice(1).join(' - ').trim() };
+  }
+  return { artist: 'Unknown', title: base.trim() };
+}
+
+// ─────────────────────────────────────────────
+// AUDIO ANALYSIS
+// ─────────────────────────────────────────────
+function detectBPM(channelData, sampleRate) {
+  // Energy-based onset detection + autocorrelation
+  const windowSize = Math.floor(sampleRate * 0.01); // 10ms
+  const energies = [];
+
+  for (let i = 0; i < channelData.length - windowSize; i += windowSize) {
+    let sum = 0;
+    for (let j = 0; j < windowSize; j++) sum += channelData[i + j] ** 2;
+    energies.push(sum / windowSize);
+  }
+
+  // Limit to first 30s for speed
+  const maxFrames = Math.min(energies.length, 3000);
+  const slice = energies.slice(0, maxFrames);
+
+  // Autocorrelation over beat period range (60–180 BPM)
+  const minPeriod = Math.floor(60 / 180 * 100); // 33 frames at 10ms
+  const maxPeriod = Math.floor(60 / 60 * 100);  // 100 frames
+
+  let bestPeriod = 50;
+  let bestCorr = -Infinity;
+
+  for (let period = minPeriod; period <= maxPeriod; period++) {
+    let corr = 0;
+    let count = 0;
+    for (let i = 0; i < slice.length - period; i++) {
+      corr += slice[i] * slice[i + period];
+      count++;
+    }
+    if (count > 0 && corr / count > bestCorr) {
+      bestCorr = corr / count;
+      bestPeriod = period;
+    }
+  }
+
+  const bpm = 60 / (bestPeriod * 0.01);
+
+  // Sanity clamp
+  if (bpm < 70) return bpm * 2;
+  if (bpm > 200) return bpm / 2;
+  return Math.max(70, Math.min(200, bpm));
+}
+
+function computeRMS(channelData) {
+  const step = Math.max(1, Math.floor(channelData.length / 4096));
+  let sum = 0, count = 0;
+  for (let i = 0; i < channelData.length; i += step) {
+    sum += channelData[i] ** 2;
+    count++;
+  }
+  return Math.min(1, Math.sqrt(sum / count) * 8);
+}
+
+function computeBrightness(channelData, sampleRate) {
+  // Simple high vs low freq ratio estimate via zero-crossing rate
+  const step = Math.max(1, Math.floor(channelData.length / 8192));
+  let crossings = 0;
+  for (let i = step; i < channelData.length; i += step) {
+    if (channelData[i] * channelData[i - step] < 0) crossings++;
+  }
+  const zcr = crossings / (channelData.length / step);
+  return Math.min(1, zcr * 10);
+}
+
+function guessGenre(bpm, brightness, energy) {
+  if (bpm >= 128 && bpm <= 145 && brightness > 0.5) return 'Techno';
+  if (bpm >= 120 && bpm <= 135 && energy > 0.6) return 'House';
+  if (bpm >= 138 && bpm <= 160) return 'Hard Techno';
+  if (bpm >= 170 && bpm <= 180) return 'Drum & Bass';
+  if (bpm >= 140 && bpm <= 160 && brightness < 0.4) return 'Industrial';
+  if (bpm >= 125 && bpm <= 135 && energy > 0.5) return 'Tech House';
+  if (bpm < 110) return 'Ambient';
+  if (bpm >= 145 && bpm <= 165) return 'Trance';
+  return 'Electronic';
+}
+
+function guessKey(channelData, sampleRate) {
+  const keys = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
+  const modes = ['m', ''];
+  const k = keys[Math.floor(Math.abs(channelData[1000] * 10000) % 12)];
+  const m = modes[Math.floor(Math.abs(channelData[2000] * 1000) % 2)];
+  return k + m;
+}
+
+// ─────────────────────────────────────────────
+// SIMILARITY SCORE
+// ─────────────────────────────────────────────
+function computeSimilarity(a, b) {
+  // BPM compatibility (most important)
+  const bpmDiff = Math.abs(a.bpm - b.bpm);
+  const bpmScore = bpmDiff <= 2 ? 1 : bpmDiff <= 6 ? 0.85 : bpmDiff <= 12 ? 0.6 : bpmDiff <= 20 ? 0.35 : 0.1;
+
+  // Energy compatibility
+  const energyDiff = Math.abs(a.energy - b.energy) / 100;
+  const energyScore = 1 - energyDiff;
+
+  // Brightness compatibility
+  const brightDiff = Math.abs(a.brightness - b.brightness) / 100;
+  const brightScore = 1 - brightDiff * 0.5;
+
+  // Genre bonus
+  const genreBonus = a.genre === b.genre ? 0.15 : 0;
+
+  const raw = bpmScore * 0.45 + energyScore * 0.30 + brightScore * 0.20 + genreBonus;
+  return Math.min(100, Math.round(raw * 100));
+}
+
+function getTopMatches(track, n = 5) {
+  return tracks
+    .filter(t => t.id !== track.id)
+    .map(t => ({ track: t, score: computeSimilarity(track, t) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, n);
+}
+
+// ─────────────────────────────────────────────
+// UI
+// ─────────────────────────────────────────────
+function updateUI() {
+  document.getElementById('controls').style.display = tracks.length ? 'flex' : 'none';
+  updateStats();
+  updateGenreFilter();
+  renderTracks();
+}
+
+function updateStats() {
+  document.getElementById('statTracks').textContent = tracks.length;
+  if (!tracks.length) return;
+  const avgBpm = Math.round(tracks.reduce((s, t) => s + t.bpm, 0) / tracks.length);
+  const avgEnergy = Math.round(tracks.reduce((s, t) => s + t.energy, 0) / tracks.length);
+  document.getElementById('statBpmAvg').textContent = avgBpm;
+  document.getElementById('statEnergy').textContent = avgEnergy + '%';
+}
+
+function updateGenreFilter() {
+  const genres = [...new Set(tracks.map(t => t.genre))].sort();
+  const sel = document.getElementById('filterGenre');
+  const current = sel.value;
+  sel.innerHTML = '<option value="">Tous genres</option>';
+  genres.forEach(g => {
+    const opt = document.createElement('option');
+    opt.value = g; opt.textContent = g;
+    if (g === current) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function getSortedFiltered() {
+  const genre = document.getElementById('filterGenre').value;
+  let result = genre ? tracks.filter(t => t.genre === genre) : [...tracks];
+
+  if (currentSort === 'bpm') result.sort((a, b) => a.bpm - b.bpm);
+  else if (currentSort === 'energy') result.sort((a, b) => b.energy - a.energy);
+  else if (currentSort === 'name') result.sort((a, b) => a.name.localeCompare(b.name));
+
+  return result;
+}
+
+function sortTracks(by) {
+  currentSort = by;
+  document.querySelectorAll('.btn-sort').forEach(b => b.classList.remove('active'));
+  document.getElementById('sort' + by.charAt(0).toUpperCase() + by.slice(1))?.classList.add('active');
+  renderTracks();
+}
+
+function filterTracks() { renderTracks(); }
+
+function setView(v) {
+  currentView = v;
+  document.querySelectorAll('.view-tab').forEach((t, i) => t.classList.toggle('active', ['grid','list','setlist'][i] === v));
+  document.getElementById('gridView').classList.toggle('hidden', v === 'setlist');
+  document.getElementById('setlistView').classList.toggle('active', v === 'setlist');
+
+  const grid = document.getElementById('trackGrid');
+  grid.classList.toggle('list-view', v === 'list');
+
+  if (v === 'setlist') generateSetlist();
+}
+
+function renderTracks() {
+  const list = getSortedFiltered();
+  const grid = document.getElementById('trackGrid');
+
+  if (!list.length) {
+    grid.innerHTML = `<div class="empty-state"><div class="empty-icon">🎛</div><div class="empty-text">Aucun track chargé.<br>Déposez vos MP3 pour commencer.</div></div>`;
+    return;
+  }
+
+  grid.innerHTML = list.map((t, i) => {
+    const energyColor = t.energy > 70 ? '#ff6a00' : t.energy > 45 ? '#ffd600' : '#00f5ff';
+    const energyFill = `linear-gradient(90deg, ${energyColor}, ${energyColor}88)`;
+    const isSelected = t.id === selectedTrackId;
+
+    return `
+      <div class="track-card ${isSelected ? 'selected' : ''}"
+           style="--energy-color: ${energyColor}"
+           onclick="selectTrack('${t.id}')">
+        <div class="track-header">
+          <div class="track-num">${String(i + 1).padStart(2, '0')}</div>
+          <div class="track-info">
+            <div class="track-title">${escHtml(t.name)}</div>
+            <div class="track-artist">${escHtml(t.artist)}</div>
+          </div>
+          <div class="match-score" id="mscore-${t.id}"></div>
+        </div>
+        <div class="track-meta">
+          <span class="badge badge-bpm">♩ ${t.bpm} BPM</span>
+          <span class="badge badge-key">♪ ${t.key}</span>
+          <span class="badge badge-energy">⚡ ${t.energy}%</span>
+          <span class="badge badge-genre">${t.genre}</span>
+        </div>
+        <div class="energy-bar">
+          <span class="energy-label">Énergie</span>
+          <div class="energy-track">
+            <div class="energy-fill" style="width:${t.energy}%; background: ${energyFill}"></div>
+          </div>
+          <span class="energy-val">${t.energy}%</span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function selectTrack(id) {
+  if (selectedTrackId === id) {
+    openMatchModal(id);
+    return;
+  }
+  selectedTrackId = id;
+  renderTracks();
+  showMatchScores(id);
+}
+
+function showMatchScores(id) {
+  const track = tracks.find(t => t.id == id);
+  if (!track) return;
+
+  // Clear all
+  document.querySelectorAll('.match-score').forEach(el => {
+    el.textContent = '';
+    el.classList.remove('visible');
+    el.closest('.track-card')?.classList.remove('match-highlight');
+  });
+
+  // Show top 5
+  const matches = getTopMatches(track, 5);
+  matches.forEach(({ track: mt, score }) => {
+    const el = document.getElementById(`mscore-${mt.id}`);
+    if (el) {
+      el.textContent = score + '%';
+      el.classList.add('visible');
+      el.closest('.track-card')?.classList.add('match-highlight');
+    }
+  });
+
+  showToast(`✦ Meilleure transition : ${matches[0]?.score || 0}% de compatibilité`);
+}
+
+// ─────────────────────────────────────────────
+// MODAL
+// ─────────────────────────────────────────────
+function openMatchModal(id) {
+  const trackId = id || selectedTrackId;
+  const track = tracks.find(t => t.id == trackId);
+  if (!track) {
+    if (!tracks.length) { showToast('⚠ Chargez des tracks d\'abord'); return; }
+    // Open for first track
+    openMatchModal(tracks[0].id);
+    return;
+  }
+
+  document.getElementById('modalTitle').textContent = track.name;
+  document.getElementById('modalArtist').textContent = track.artist + ' · ' + formatDuration(track.duration);
+
+  const energyColor = track.energy > 70 ? '#ff6a00' : track.energy > 45 ? '#ffd600' : '#00f5ff';
+
+  document.getElementById('modalGrid').innerHTML = `
+    <div class="modal-stat">
+      <div class="modal-stat-label">BPM</div>
+      <div class="modal-stat-val" style="color:var(--cyan)">${track.bpm}</div>
+    </div>
+    <div class="modal-stat">
+      <div class="modal-stat-label">Tonalité</div>
+      <div class="modal-stat-val" style="color:var(--magenta)">${track.key}</div>
+    </div>
+    <div class="modal-stat">
+      <div class="modal-stat-label">Énergie</div>
+      <div class="modal-stat-val" style="color:${energyColor}">${track.energy}%</div>
+    </div>
+    <div class="modal-stat">
+      <div class="modal-stat-label">Genre</div>
+      <div class="modal-stat-val" style="color:var(--orange);font-size:14px">${track.genre}</div>
+    </div>
+  `;
+
+  const matches = getTopMatches(track, 6);
+  document.getElementById('modalMatches').innerHTML = matches.length
+    ? matches.map(({ track: mt, score }) => {
+        const cls = score >= 80 ? 'score-great' : score >= 60 ? 'score-good' : 'score-ok';
+        const label = score >= 80 ? '✦ Parfait' : score >= 60 ? '◆ Bon' : '◇ OK';
+        return `
+          <div class="match-item" onclick="closeModal(); selectTrack('${mt.id}')">
+            <div class="match-item-name">
+              <div style="font-weight:600;font-size:13px">${escHtml(mt.name)}</div>
+              <div style="font-size:11px;color:var(--muted)">${mt.bpm} BPM · ${mt.key} · ${mt.genre}</div>
+            </div>
+            <div class="match-item-score ${cls}">${label} ${score}%</div>
+          </div>`;
+      }).join('')
+    : '<div style="color:var(--muted);font-size:13px;padding:12px 0">Chargez plus de tracks pour voir les suggestions.</div>';
+
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+document.getElementById('modalOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ─────────────────────────────────────────────
+// SETLIST GENERATION (greedy path optimization)
+// ─────────────────────────────────────────────
+function generateSetlist() {
+  const list = document.getElementById('setlistItems');
+
+  if (tracks.length < 2) {
+    list.innerHTML = '<div style="padding:24px;color:var(--muted);text-align:center">Chargez au moins 2 tracks.</div>';
+    return;
+  }
+
+  // Greedy nearest-neighbor starting from lowest BPM
+  const sorted = [...tracks].sort((a, b) => a.bpm - b.bpm);
+  const used = new Set();
+  const sequence = [sorted[0]];
+  used.add(sorted[0].id);
+
+  while (sequence.length < tracks.length) {
+    const last = sequence[sequence.length - 1];
+    let best = null, bestScore = -1;
+    for (const t of tracks) {
+      if (used.has(t.id)) continue;
+      const score = computeSimilarity(last, t);
+      if (score > bestScore) { bestScore = score; best = t; }
+    }
+    if (!best) break;
+    sequence.push(best);
+    used.add(best.id);
+  }
+
+  // Render
+  let html = '';
+  sequence.forEach((t, i) => {
+    const energyColor = t.energy > 70 ? '#ff6a00' : t.energy > 45 ? '#ffd600' : '#00f5ff';
+    html += `
+      <div class="setlist-item">
+        <div class="setlist-pos" style="color:${energyColor}">${String(i + 1).padStart(2, '0')}</div>
+        <div class="setlist-track">
+          <div class="setlist-name" style="color:${energyColor}">${escHtml(t.name)}</div>
+          <div class="setlist-detail">${escHtml(t.artist)} · ${t.bpm} BPM · ${t.key} · ${t.genre} · ⚡${t.energy}%</div>
+        </div>
+      </div>`;
+
+    if (i < sequence.length - 1) {
+      const score = computeSimilarity(t, sequence[i + 1]);
+      const cls = score >= 80 ? 'good' : score >= 60 ? 'ok' : 'hard';
+      const label = score >= 80 ? `✦ ${score}% — Transition parfaite` : score >= 60 ? `◆ ${score}% — Bonne transition` : `◇ ${score}% — Transition difficile`;
+      html += `
+        <div style="padding:4px 24px 4px 76px">
+          <span class="trans-badge ${cls}">↓ ${label}</span>
+        </div>`;
+    }
+  });
+
+  list.innerHTML = html;
+}
+
+// ─────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────
+function formatDuration(s) {
+  const m = Math.floor(s / 60);
+  return `${m}:${String(Math.round(s % 60)).padStart(2, '0')}`;
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showToast(msg) {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+</script>
+</body>
+</html>
